@@ -1,0 +1,323 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2008-2013 OpenWrt.org
+# Copyright (C) 2008 Jo-Philipp Wich
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+
+. /lib/functions.sh
+
+START=90
+STOP=10
+
+LIST_SEP="
+"
+
+UCI_STARTED=
+UCI_DISABLED=
+
+PROG=/usr/sbin/openvpn
+
+log() {
+	logger -t "OpenVPN : " "$@"
+}
+
+check_config () {
+	CHANGE="0"
+	WW=$(uci get network.VPN)
+	if [ -z $WW ]; then
+		uci set network.VPN=interface
+		uci set network.VPN.proto="none"
+		uci set network.VPN.ifname="tun0"
+		CHANGE="1"
+	fi
+	WW=$(uci get network.VPNS)
+	if [ -z $WW ]; then
+		uci set network.VPNS=interface
+		uci set network.VPNS.proto="none"
+		uci set network.VPNS.ifname="tun-server"
+		CHANGE="1"
+	fi
+	WW=$(uci get network.TAP)
+	if [ -z $WW ]; then
+		uci set network.TAP=interface
+		uci set network.TAP.proto="none"
+		uci set network.TAP.ifname="tap0"
+		uci set network.TAP.auto="1"
+		LANIF=$(uci get network.lan.ifname)
+		TAP0=$(echo $LANIF | grep "tap0")
+		if [ -z $TAP0 ]; then
+			uci set network.lan.ifname="$(uci get network.lan.ifname) tap0"
+		fi
+		CHANGE="1"
+	fi
+	WW=$(uci get network.TAPS)
+	if [ -z $WW ]; then
+		uci set network.TAPS=interface
+		uci set network.TAPS.proto="none"
+		uci set network.TAPS.ifname="tap-server"
+		uci set network.TAPS.auto="1"
+		LANIF=$(uci get network.lan.ifname)
+		TAP1=$(echo $LANIF | grep "tap-server")
+		if [ -z $TAP1 ]; then
+			uci set network.lan.ifname="$(uci get network.lan.ifname) tap-server"
+		fi
+		CHANGE="1"
+	fi
+	if [ $CHANGE = "1" ]; then
+		uci commit network
+		/etc/init.d/network restart
+	fi
+	
+	CHANGE="0"
+	WW=$(uci get firewall.vpnzone)
+	if [ -z $WW ]; then
+		uci set firewall.vpnzone=zone
+		uci set firewall.vpnzone.name="VPN"
+		uci set firewall.vpnzone.forward="REJECT"
+		uci set firewall.vpnzone.output="ACCEPT"
+		uci set firewall.vpnzone.network="VPN"
+		uci set firewall.vpnzone.input="REJECT"
+		uci set firewall.vpnzone.masq="1"
+		uci set firewall.vpnzone.mtu_fix="1"
+		uci set firewall.vpnforward=forwarding
+		uci set firewall.vpnforward.dest="VPN"
+		uci set firewall.vpnforward.src="lan"
+		CHANGE="1"
+	fi	
+	WW=$(uci get firewall.vpnzones)
+	if [ -z $WW ]; then
+		uci set firewall.vpnzones=zone
+		uci set firewall.vpnzones.name="VPNS"
+		uci set firewall.vpnzones.forward="REJECT"
+		uci set firewall.vpnzones.output="ACCEPT"
+		uci set firewall.vpnzones.network="VPNS"
+		uci set firewall.vpnzones.input="ACCEPT"
+		uci set firewall.vpnzones.masq="1"
+		uci set firewall.vpnzones.mtu_fix="1"
+		uci set firewall.vpnforwards=forwarding
+		uci set firewall.vpnforwards.dest="VPNS"
+		uci set firewall.vpnforwards.src="lan"
+		CHANGE="1"
+	fi
+	if [ $CHANGE = "1" ]; then	
+		uci commit firewall
+		/etc/init.d/firewall restart
+	fi
+	WW=$(uci get openvpn.settings)
+	if [ -z $WW ]; then
+		uci set openvpn.settings=settings
+		uci set openvpn.settings.vpn2lan="0"
+		uci set openvpn.settings.vpns2lan="0"
+		uci set openvpn.settings.vpn2wan="0"
+		uci set openvpn.settings.country="CA"
+		uci set openvpn.settings.city="Abbotsford"
+		uci set openvpn.settings.organ="ROOter"
+		uci set openvpn.settings.days="3650"
+		uci commit openvpn
+	fi
+}
+
+checkserver() {
+	local s=$1
+	local SERVER="0"
+	local config=$(uci get openvpn.$s.config)
+	if [ ! -z $config ]; then
+		return
+	fi
+	local client=$(uci get openvpn.$s.client)
+	if [ -z $client ]; then
+		SERVER="1"
+	else
+		if [ $client = "0" ]; then
+			SERVER="1"
+		fi
+	fi
+	
+	if [ $SERVER = "1" ]; then
+		port=$(uci get openvpn.$s.port)
+		if [ -z $port ]; then
+			PORT="1194"
+		else
+			PORT=$port
+		fi
+		# look for rule for this port
+		INB="inbound"$PORT
+		RULE=$(uci get firewall.$INB)
+		if [ -z $RULE ]; then
+			uci set firewall.$INB=rule
+			uci set firewall.$INB.target=ACCEPT
+			uci set firewall.$INB.src=*
+			uci set firewall.$INB.proto=udp
+			uci set firewall.$INB.dest_port=$PORT
+			uci commit firewall
+			/etc/init.d/firewall reload
+		fi
+		DEV=$(uci get openvpn.$s.dev)
+		if [ $DEV = "tun0" ]; then
+			uci set openvpn.$s.dev="tun-server"
+			uci commit openvpn
+		else
+			
+			if [ $DEV = "tap0" ]; then
+				uci set openvpn.$s.dev="tap-server"
+				uci commit openvpn
+			fi
+		fi
+	else
+		DEV=$(uci get openvpn.$s.dev)
+		if [ $DEV = "tun-server" ]; then
+			uci set openvpn.$s.dev="tun0"
+			uci commit openvpn
+		else
+			if [ $DEV = "tap-server" ]; then
+				uci set openvpn.$s.dev="tap0"
+				uci commit openvpn
+			fi
+		fi
+	fi
+}
+
+ovpn() {
+	local s=$1
+	OVPN=$2
+	config_get auth_user_pass "$s" auth_user_pass
+	if [ ! -z $auth_user_pass ]; then
+		auth_user_pass="${auth_user_pass:+$(readlink -f "$auth_user_pass")}"
+		PS=$(grep -m 1 "^auth-user-pass" $OVPN)
+		sed -i -e "s|$PS|auth-user-pass $auth_user_pass|g" "$OVPN"
+	fi
+	config_get cert "$s" cert
+	if [ ! -z $cert ]; then
+		cert="${cert:+$(readlink -f "$cert")}"
+		PS=$(grep -m 1 "^cert " $OVPN)
+		chrlen=${#PS}
+		if [ $chrlen -gt 5 ]; then
+			sed -i -e "s|$PS|cert $cert|1" "$OVPN"
+		fi
+	fi
+	config_get ca "$s" ca
+	if [ ! -z $ca ]; then
+		ca="${ca:+$(readlink -f "$ca")}"
+		PS=$(grep -m 1 "^ca " $OVPN)
+		chrlen=${#PS}
+		if [ $chrlen -gt 3 ]; then
+			sed -i -e "s|$PS|ca $ca|1" "$OVPN"
+		fi
+	fi
+	config_get key "$s" key
+	if [ ! -z $key ]; then
+		key="${key:+$(readlink -f "$key")}"
+		PS=$(grep -m 1 "^key " $OVPN)
+		chrlen=${#PS}
+		if [ $chrlen -gt 4 ]; then
+			sed -i -e "s|$PS|key $key|1" "$OVPN"
+		fi
+	fi
+	config_get tls_auth "$s" tls_auth
+	if [ ! -z $tls_auth ]; then
+		tls_auth="${tls_auth:+$(readlink -f "$tls_auth")}"
+		PS=$(grep -m 1 "^tls-auth " $OVPN)
+		chrlen=${#PS}
+		if [ $chrlen -gt 4 ]; then
+			sed -i -e "s|$PS|tls-auth $tls_auth|1" "$OVPN"
+		fi
+	fi
+}
+
+append_param() {
+	local s="$1"
+	local v="$2"
+	case "$v" in
+		*_*_*_*) v=${v%%_*}-${v#*_}; v=${v%%_*}-${v#*_}; v=${v%%_*}-${v#*_} ;;
+		*_*_*)   v=${v%%_*}-${v#*_}; v=${v%%_*}-${v#*_} ;;
+		*_*)     v=${v%%_*}-${v#*_} ;;
+	esac
+	echo -n "$v" >> "/var/etc/openvpn-$s.conf"
+	return 0
+}
+
+append_bools() {
+	local p; local v; local s="$1"; shift
+	for p in $*; do
+		config_get_bool v "$s" "$p"
+		[ "$v" = 1 ] && append_param "$s" "$p" && echo >> "/var/etc/openvpn-$s.conf"
+	done
+}
+
+append_params() {
+	local p; local v; local s="$1"; shift
+	for p in $*; do
+		config_get v "$s" "$p"
+		IFS="$LIST_SEP"
+		for v in $v; do
+			[ -n "$v" ] && [ "$p" != "push" ] && append_param "$s" "$p" && echo " $v" >> "/var/etc/openvpn-$s.conf"
+			[ -n "$v" ] && [ "$p" == "push" ] && append_param "$s" "$p" && echo " \"$v\"" >> "/var/etc/openvpn-$s.conf"
+		done
+		unset IFS
+	done
+}
+
+section_enabled() {
+	config_get_bool enable  "$1" 'enable'  0
+	config_get_bool enabled "$1" 'enabled' 0
+	[ $enable -gt 0 ] || [ $enabled -gt 0 ]
+}
+
+openvpn_add_instance() {
+	local name="$1"
+	local dir="$2"
+	local conf="$3"
+	log "Add Instance $1 $2 $3"
+
+	"$PROG"	--syslog "openvpn($name)" --status "/var/run/openvpn.$name.status" --cd "$dir" --config "$conf" &
+	sleep 5
+}
+
+start_instance() {
+	local s="$1"
+	local name=$2
+	if [ -z $name ]; then
+		config_get_bool bootstart  "$s" 'bootstart'  0
+		if [ $bootstart -eq 0 ]; then
+			return
+		fi
+	else
+		if [ $s != $name ]; then
+			return 1
+		fi
+	fi
+	
+	config_get config "$s" config
+	config="${config:+$(readlink -f "$config")}"
+	section_enabled "$s" || {
+		append UCI_DISABLED "$config" "$LIST_SEP"
+		return 1
+	}
+
+	[ ! -d "/var/run" ] && mkdir -p "/var/run"
+
+	if [ ! -z "$config" ]; then
+		ovpn $s $config
+		append UCI_STARTED "$config" "$LIST_SEP"
+		openvpn_add_instance "$s" "${config%/*}" "$config"
+		return
+	fi
+	
+
+	[ ! -d "/var/etc" ] && mkdir -p "/var/etc"
+	[ -f "/var/etc/openvpn-$s.conf" ] && rm "/var/etc/openvpn-$s.conf"
+
+	append_bools "$s" $OPENVPN_BOOLS
+	append_params "$s" $OPENVPN_PARAMS
+	openvpn_add_instance "$s" "/var/etc" "openvpn-$s.conf"
+}
+
+start() {
+	check_config
+	checkserver $1
+	. /usr/share/openvpn/openvpn.options
+	config_load 'openvpn'
+	config_foreach start_instance 'openvpn' $1
+}
+
+

@@ -1,0 +1,33 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+
+log() {
+	logger -t "Buttons" "$@"
+}
+
+START=98
+
+start() {
+	local BTN=$(uci get system.@button[-1].button)
+	if [ -z $BTN ]; then
+		uci add system button
+		uci set system.@button[-1].button=reset
+		uci set system.@button[-1].action=released
+		uci set system.@button[-1].handler="/etc/btnaction.sh reset_short"
+		uci set system.@button[-1].min=5
+		uci set system.@button[-1].max=15
+
+		uci add system button
+		uci set system.@button[-1].button=reset
+		uci set system.@button[-1].action=released
+		uci set system.@button[-1].handler="/etc/btnaction.sh reset_long"
+		uci set system.@button[-1].min=17
+		uci set system.@button[-1].max=60
+
+		uci commit system
+	fi
+}
+
+stop() {
+	log "Stopping Buttons"
+}

@@ -1,0 +1,516 @@
+<%+header%>
+
+<script type="text/javascript" src="<%=resource%>/xhr.js"></script>
+<script type="text/javascript">//<![CDATA[
+
+	XHR.poll(2, '<%=luci.dispatcher.build_url("admin", "modem", "check_misc")%>', null,
+		function(x, rv)
+		{
+			document.getElementById("conntype").innerHTML=rv.conntype;
+			stat = rv.active
+			gpio = rv.gpio
+			usb = rv.usb
+			if ( stat == "0" )
+			{
+				document.getElementById("active").innerHTML="No Modem Present";
+				document.getElementById("conn").disabled=true;
+				document.getElementById("disconn").disabled=true;
+				document.getElementById("sendcmdat").disabled=true;
+				document.getElementById("atcmd").value=" ";
+				document.getElementById("attxt").value=" ";
+				document.getElementById("apply1").disabled=true;
+				document.getElementById("net1").style.display="none";
+				document.getElementById("net2").style.display="none";
+				document.getElementById("net3").style.display="none";
+				document.getElementById("apply1").style.display="none";
+				if ( gpio == "0" )
+				{
+					document.getElementById("pwrtoggle").style.display="none";
+					document.getElementById("pwrtoggle1").style.display="none";
+				}
+				if ( gpio == "1" )
+				{
+					document.getElementById("pwrtoggle").style.display="block";
+					document.getElementById("pwrtoggle").disabled=true;
+					document.getElementById("pwrtoggle1").style.display="none";
+				}
+				if ( gpio == "2" )
+				{
+					document.getElementById("pwrtoggle").style.display="block";
+					document.getElementById("pwrtoggle1").style.display="block";
+					document.getElementById("pwrtoggle").disabled=true;
+					document.getElementById("pwrtoggle1").disabled=true;
+				}
+			}
+			if ( stat == "1" )
+			{
+				document.getElementById("active").innerHTML="Modem Present/Not Connected";
+				document.getElementById("conn").disabled=false;
+				document.getElementById("disconn").disabled=true;
+				document.getElementById("sendcmdat").disabled=false;
+				document.getElementById("apply1").disabled=false;
+				if ( gpio == "0" )
+				{
+					if ( usb == "0" )
+					{
+						document.getElementById("pwrtoggle").style.display="none";
+						document.getElementById("pwrtoggle1").style.display="none";
+					}
+					if ( usb == "1" )
+					{ 
+						document.getElementById("pwrtoggle").style.display="block";
+						document.getElementById("pwrtoggle").value="Re-bind USB 1 Driver";
+						document.getElementById("pwrtoggle").disabled=false;
+						document.getElementById("pwrtoggle").style.visibility="visible";
+						document.getElementById("pwrtoggle1").style.display="none";
+					}
+					if ( usb == "2" )
+					{
+						document.getElementById("pwrtoggle").style.display="block";
+						document.getElementById("pwrtoggle").value="Re-bind USB 1 Driver";
+						document.getElementById("pwrtoggle").disabled=false;
+						document.getElementById("pwrtoggle").style.visibility="visible";
+						document.getElementById("pwrtoggle1").style.display="block";
+						document.getElementById("pwrtoggle1").value="Re-bind USB 2 Driver";
+						document.getElementById("pwrtoggle1").disabled=false;
+						document.getElementById("pwrtoggle1").style.visibility="visible";
+					}
+				}
+				if ( gpio == "1" )
+				{
+					document.getElementById("pwrtoggle").disabled=false;
+					document.getElementById("pwrtoggle").style.display="block";
+					document.getElementById("pwrtoggle1").style.display="none";
+				}
+				if ( gpio == "2" )
+				{
+					document.getElementById("pwrtoggle").style.display="block";
+					document.getElementById("pwrtoggle1").style.display="block";
+					document.getElementById("pwrtoggle").disabled=false;
+					document.getElementById("pwrtoggle1").disabled=false;
+				}
+			}
+			if ( stat == "2" )
+			{
+				document.getElementById("active").innerHTML="Modem Connected";
+				document.getElementById("conn").disabled=true;
+				document.getElementById("disconn").disabled=false;
+				document.getElementById("sendcmdat").disabled=false;
+				document.getElementById("apply1").disabled=false;
+				if ( gpio == "0" )
+				{
+					if ( usb == "0" )
+					{
+						document.getElementById("pwrtoggle").style.display="none";
+						document.getElementById("pwrtoggle1").style.display="none";
+					}
+					if ( usb == "1" )
+					{ 
+						document.getElementById("pwrtoggle").style.display="block";
+						document.getElementById("pwrtoggle").value="Re-bind USB 1 Driver";
+						document.getElementById("pwrtoggle").disabled=false;
+						document.getElementById("pwrtoggle").style.visibility="visible";
+						document.getElementById("pwrtoggle1").style.display="none";
+					}
+					if ( usb == "2" )
+					{
+						document.getElementById("pwrtoggle").style.display="block";
+						document.getElementById("pwrtoggle").value="Re-bind USB 1 Driver";
+						document.getElementById("pwrtoggle").disabled=false;
+						document.getElementById("pwrtoggle").style.visibility="visible";
+						document.getElementById("pwrtoggle1").style.display="block";
+						document.getElementById("pwrtoggle1").value="Re-bind USB 2 Driver";
+						document.getElementById("pwrtoggle1").disabled=false;
+						document.getElementById("pwrtoggle1").style.visibility="visible";
+					}
+				}
+				if ( gpio == "1" )
+				{
+					document.getElementById("pwrtoggle").style.display="block";
+					document.getElementById("pwrtoggle").disabled=false;
+					document.getElementById("pwrtoggle").style.visibility="visible";
+					document.getElementById("pwrtoggle1").style.display="none";
+				}
+				if ( gpio == "2" )
+				{
+					document.getElementById("pwrtoggle").style.display="block";
+					document.getElementById("pwrtoggle1").style.display="block";
+					document.getElementById("pwrtoggle").disabled=false;
+					document.getElementById("pwrtoggle").style.visibility="visible";
+					document.getElementById("pwrtoggle1").disabled=false;
+					document.getElementById("pwrtoggle1").style.visibility="visible";
+				}
+			}
+			proto = rv.proto
+			if ( proto == "3" )
+			{
+				document.getElementById("sendcmdat").disabled=true;
+				document.getElementById("atcmd").value=" ";
+				document.getElementById("attxt").value=" ";
+				document.getElementById("apply1").disabled=true;
+			}
+			var netm = rv.netmode;
+			var mode = "-";
+			switch(netm)
+			{
+				case "0":
+					mode = "Unknown";
+				break;
+				case "1":
+					mode = "Automatic";
+				break;
+				case "2":
+					mode = "2G Preferred";
+				break;
+				case "3":
+					mode = "2G Only";
+				break;
+				case "4":
+					mode = "3G Preferred";
+				break;
+				case "5":
+					mode = "3G Only";
+				break;
+				case "6":
+					mode = "4G Preferred";
+				break;
+				case "7":
+					mode = "4G Only";
+				break;
+				case "10":
+					mode = "Changing Mode ...";
+					document.getElementById("apply1").value="Applying Change";
+					document.getElementById("apply1").disabled=true;
+				break;
+
+			}
+			document.getElementById("netmode").innerHTML=mode;
+
+			cell = rv.celltype;
+			if ( cell == "-" )
+			{
+				document.getElementById("net1").style.display="none";
+				document.getElementById("net2").style.display="none";
+				document.getElementById("net3").style.display="none";
+				document.getElementById("apply1").style.display="none";
+			}
+			if ( cell == "0" )
+			{
+				document.getElementById("net1").style.display="none";
+				document.getElementById("net2").style.display="none";
+				document.getElementById("net3").style.display="none";
+				document.getElementById("apply1").style.display="none";
+			}
+			if ( cell == "1" )
+			{
+				document.getElementById("net1").style.display="block";
+				document.getElementById("net1").style.visibility="visible";
+				document.getElementById("net2").style.display="none";
+				document.getElementById("net3").style.display="none";
+				document.getElementById("apply1").style.display="block";
+				document.getElementById("apply1").style.visibility="visible";
+			}
+			if ( cell == "2" )
+			{
+				document.getElementById("net1").style.display="none";
+				document.getElementById("net2").style.display="none";
+				document.getElementById("net3").style.display="block";
+				document.getElementById("net3").style.visibility="visible";
+				document.getElementById("apply1").style.display="block";
+				document.getElementById("apply1").style.visibility="visible";
+			}
+			if ( cell == "3" )
+			{
+				document.getElementById("net1").style.display="none";
+				document.getElementById("net2").style.display="block";
+				document.getElementById("net2").style.visibility="visible";
+				document.getElementById("net3").style.display="none";
+				document.getElementById("apply1").style.display="block";
+				document.getElementById("apply1").style.visibility="visible";
+			}
+			//document.getElementById("sendcmdat").focus();
+		}
+	); 
+
+	function modemtoggle(btn)
+	{
+		btn.disabled = true;
+		btn.value    = '<%:Changing...%>';
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "change_misc")%>',
+			null,
+			function(x, rv)
+			{
+				btn.disabled = false;
+				btn.value    = '<%:Next Modem%>';
+			}
+		);
+
+		return false;
+	}
+
+	function modemtoggledn(btn)
+	{
+		btn.disabled = true;
+		btn.value    = '<%:Changing...%>';
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "change_miscdn")%>',
+			null,
+			function(x, rv)
+			{
+				btn.disabled = false;
+				btn.value    = '<%:Prev Modem%>';
+			}
+		);
+
+		return false;
+	}
+
+	function modemconnect(btn)
+	{
+		btn.disabled = true;
+		btn.value    = '<%:Connecting...%>';
+
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "connect")%>',
+			{ set: 1 },
+			function()
+			{
+				btn.disabled = false;
+				btn.value = '<%:Connect Current Modem%>';
+			}
+		);
+		return false;
+	}
+
+	function modemdisconnect(btn)
+	{
+		btn.disabled = true;
+		btn.value    = '<%:Disconnecting...%>';
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "disconnect")%>',
+			{ set: 1 },
+			function()
+			{
+				btn.disabled = false;
+				btn.value = '<%:Disconnect Current Modem%>';
+			}
+		);
+		return false;
+	}
+
+	function powertoggle(btn)
+	{
+		btn.disabled = true;
+		btn.value    = '<%:Toggling...%>';
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "pwrtoggle")%>',
+			{ set: 1 },
+			function()
+			{
+				btn.disabled = false;
+				btn.value = '<%:Power Toggle USB 1%>';
+			}
+		);
+		return false;
+	}
+
+	function powertoggle1(btn)
+	{
+		btn.disabled = true;
+		btn.value    = '<%:Toggling...%>';
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "pwrtoggle")%>',
+			{ set: 2 },
+			function()
+			{
+				btn.disabled = false;
+				btn.value = '<%:Power Toggle USB 2%>';
+			}
+		);
+		return false;
+	}
+
+	function sndcmd(event) 
+	{
+		var x = event.key;
+    		if (x == "Enter")
+		{
+			document.getElementById("sendcmdat").focus();
+			var s = document.getElementById("atcmd").value;
+			if ( s.length == 0 )
+			{
+				alert("You must enter an AT-Command!!");
+				return false;
+			}
+			atsend=1;
+			document.getElementById("attxt").value="Waiting for a Response";
+			XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "send_atcmd")%>',
+				{ set: s },
+				function(x, rv)
+				{
+					document.getElementById("atcmd").focus();
+					document.getElementById("attxt").value=rv.result;
+					atsend=0;
+				}
+			);
+		}
+		return false;
+	}
+
+	function sendcmd()
+	{
+		var s = document.getElementById("atcmd").value;
+		if ( s.length == 0 )
+		{
+			alert("You must enter an AT-Command!!");
+			return false;
+		}
+		atsend=1;
+		document.getElementById("attxt").value="Waiting for a Response";
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "send_atcmd")%>',
+			{ set: s },
+			function(x, rv)
+			{
+				document.getElementById("attxt").value=rv.result;
+				atsend=0;
+			}
+		);
+
+		return false;
+	}
+
+	function applyc(btn)
+	{
+		var nmode=0;
+		switch(cell)
+		{
+			case "1":
+				nmode=document.getElementById("net1").value;
+				break;
+			case "2":
+				nmode=document.getElementById("net3").value;
+				break;
+			case "3":
+				nmode=document.getElementById("net2").value;
+				break;
+		}
+		document.getElementById("netmode").innerHTML = "Changing Mode ...";
+		document.getElementById("apply1").value="Applying Change";
+		document.getElementById("apply1").disabled=true;
+
+		var modemtype = 0;
+		var mt=(Number(modemtype)*16) + Number(nmode);
+		XHR.get('<%=luci.dispatcher.build_url("admin", "modem", "change_mode")%>',
+			{ set: mt },
+			function()
+			{
+			}
+		);
+
+		return false;
+	}
+
+//]]></script>
+
+<form method="post" action="<%=REQUEST_URI%>">
+<div class="cbi-map" id="cbi-misc">
+<h2><a id="content" name="content">Miscellaneous Modem Features</a></h2>
+<div class="cbi-map-descr">A Collection of Modem Features</div>
+<fieldset class="cbi-section" id="cbi-modi">
+	<legend>Current Modem</legend>
+	<table width="550"  border="0">
+  	<tr>
+    		<td width="40%"><ul id="active"></ul></td>
+    		<td width="17%"><strong id="conntype"></strong></td>
+		<td width="12%">
+			<input type="button" class="cbi-button cbi-button-apply" value="<%:Prev Modem%>" onclick="return modemtoggledn(this)" />
+		</td>
+		<td width="31%">
+			<input type="button" class="cbi-button cbi-button-apply" value="<%:Next Modem%>" onclick="return modemtoggle(this)" />
+		</td>
+  	</tr>
+	</table>
+</fieldset>
+<fieldset class="cbi-section" id="cbi-condis">
+	<legend>Connection/Disconnection</legend>
+	<table width="550"  border="0">
+  	<tr>
+		<td width="25%">
+			<input type="button" id="conn" class="cbi-button cbi-button-apply" value="<%:Connect Current Modem%>" onclick="return modemconnect(this)" />
+		</td>
+		<td width="25%">
+			<input type="button" id="disconn" class="cbi-button cbi-button-apply" value="<%:Disconnect Current Modem%>" onclick="return modemdisconnect(this)" />
+		</td>
+		<td width="25%">
+			<input style="visibility:hidden;" type="button" id="pwrtoggle" class="cbi-button cbi-button-apply" value="<%:Power Toggle USB 1%>" onclick="return powertoggle(this)" />
+		</td>
+		<td width="25%">
+			<input style="visibility:hidden;" type="button" id="pwrtoggle1" class="cbi-button cbi-button-apply" value="<%:Power Toggle USB 2%>" onclick="return powertoggle1(this)" />
+		</td>
+  	</tr>
+	</table>
+</fieldset>
+
+<fieldset class="cbi-section" id="cbi-term">
+	<legend>AT-Command Terminal</legend>
+	<table width="700" border="0">
+	<tr>
+		<td width="5%"><div align="right">AT-Command : </div></td>
+		<td width="95%"><input type="text" name="atcmd" id="atcmd" class="cbi-input-text" style="width: 350px;" maxlength="500" onkeydown="sndcmd(event)" ></input></td>
+	</tr>
+	<tr>
+		<td><input type="submit" id="sendcmdat" class="cbi-button cbi-button-apply" value="<%:Send Command%>" onclick="return sendcmd()" /></td>
+		<td> </td>
+		</tr>
+	</table>
+
+	<table id="cmdtxt" width="700"  border="0" style="display:table;">
+  	<tr>
+    		<td width="100%">
+		<textarea readonly="readonly" name="attxt" id="attxt" rows="6" style="width: 600px;" maxlength="160"></textarea> 
+		</td>
+	</tr>
+	</table>
+
+</fieldset>
+
+<fieldset class="cbi-section" id="cbi-mode">
+	<legend>Cellular Mode</legend>
+	<table width="550"  border="0">
+  	<tr>
+    		<td width="30%"><div align="right">Current Cellular Mode :</div></td>
+    		<td width="20%"><ul><span id="netmode" class="r"></span></ul></td>
+    		<td width="50%">&nbsp;</td>
+  	</tr>
+	<tr>
+    		<td><div align="right">Change Cellular Mode :</div></td>
+    		<td>
+		<select style="visibility:hidden;width:auto" name="net_mode" id="net1">
+			<option value="1" selected="selected"><%:Automatic%></option>
+			<option value="2"><%:2G Preferred%></option>
+			<option value="3"><%:2G Only%></option>
+			<option value="4"><%:3G Preferred%></option>
+			<option value="5"><%:3G Only%></option>
+		</select>
+		<select style="visibility:hidden;width:auto" name="net_mode" id="net2">
+			<option value="1" selected="selected"><%:Automatic%></option>
+			<option value="2"><%:2G Preferred%></option>
+			<option value="3"><%:2G Only%></option>
+			<option value="4"><%:3G Preferred%></option>
+			<option value="5"><%:3G Only%></option>
+			<option value="6"><%:4G Preferred%></option>
+			<option value="7"><%:4G Only%></option>
+		</select>
+		<select style="visibility:hidden;width:auto" name="net_mode" id="net3">
+			<option value="1" selected="selected"><%:Automatic%></option>
+			<option value="4"><%:3G Preferred%></option>
+			<option value="5"><%:3G Only%></option>
+			<option value="6"><%:4G Preferred%></option>
+			<option value="7"><%:4G Only%></option>
+		</select>
+		</td>
+		<td><input style="visibility:hidden;" type="button" id="apply1" class="cbi-button cbi-button-apply" value="<%:Apply Mode Change%>" onclick="return applyc(this)" /></td>
+		<td>&nbsp;</td>
+  	</tr>
+
+ 	</table>
+</fieldset>
+
+</div>
+</form>
+<%+footer%>

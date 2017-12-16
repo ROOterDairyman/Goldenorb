@@ -1,0 +1,106 @@
+#!/bin/sh  /etc/rc.common
+. /lib/functions.sh
+
+log() {
+	logger -t "20-mount" "$@"
+}
+
+do_ap() {
+	local config=$1
+	local passw=$2
+	local mode
+
+	config_get mode $1 mode
+	if [ $mode = "ap" ]; then
+		uci -q set wireless."${config}".key=$passw
+		uci -q set wireless."${config}".encryption=psk
+	fi
+}
+
+if [ ! -f /tmp/bootend.file ]; then
+	sleep 10
+	while [ ! -f /tmp/bootend.file ]; do
+		sleep 1
+	done
+	log "Delay Block Mount for boot up"
+fi
+
+blkdev=`dirname $DEVPATH` 
+if [ `basename $blkdev` != "block" ]; then 
+	device=`basename $DEVPATH` 
+	if echo $device | grep -q "mtdblock"; then
+		exit 0
+	fi
+	if echo $device | grep -q "CF_1GB"; then
+		exit 0
+	fi
+	if echo $device | grep -q "mmcblk"; then
+		exit 0
+	fi
+
+	case "$ACTION" in 
+		add) 
+			mkdir -p /mnt/$device 
+			# vfat & ntfs-3g check 
+			if [ `which fdisk` ]; then 
+				isntfs=`fdisk -l | grep $device | grep NTFS` 
+				isvfat=`fdisk -l | grep $device | grep FAT` 
+				isfuse=`lsmod | grep fuse` 
+				isntfs3g=`which ntfs-3g` 
+			else 
+				isntfs="" 
+				isvfat="" 
+			fi 
+			# mount with ntfs-3g if possible, else with default mount 
+			if [ "$isntfs" -a "$isfuse" -a "$isntfs3g" ]; then 
+				ntfs-3g -o nls=utf8 /dev/$device /mnt/$device 
+				log "Mount /mnt/$device as NTFS"
+			elif [ "$isvfat" ]; then 
+				mount -o codepage=437,iocharset=iso8859-1 /dev/$device /mnt/$device 
+				log "Mount /mnt/$device as FAT"
+			else 
+				mount /dev/$device /mnt/$device 
+				log "Mount /mnt/$device as other"
+			fi 
+			<<COMMENT1
+			source /etc/firstboot
+			if [ $FIRSTBOOT = "0" ]; then
+log "First Boot"
+				if [ -f /tmp/boottime ]; then
+					source /tmp/boottime
+					CURRTIME=$(date +%s)
+					let ELAPSE=CURRTIME-BOOTTIME
+log "Elasped time : $ELAPSE"
+					if [ $ELAPSE -lt 180 ]; then
+						if [ -f /mnt/$device/password.txt ]; then
+							read password < /mnt/$device/password.txt
+log "Password : $password"
+							if [ ! -z $password ]; then
+								size=${#password}
+								if [ $size -gt 7 ]; then
+									while [ ! -e /etc/config/wireless ]
+									do
+										sleep 1
+									done
+									sleep 3
+									config_load wireless
+									config_foreach do_ap wifi-iface $password
+									if [ -n "$(uci -q changes wireless)" ]
+        								then
+										log "Wifi Password Changed at Flashing to $password"
+            									uci -q commit wireless
+           									ubus call network reload
+        								fi
+								else
+									log "Password in file is too short"
+								fi
+ 							fi
+						fi
+					fi
+				fi
+				echo 'FIRSTBOOT="'"1"'"' > /etc/firstboot
+			fi
+			COMMENT1
+		;; 
+	esac 
+fi

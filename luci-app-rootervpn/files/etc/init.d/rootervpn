@@ -1,0 +1,14 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+
+START=19
+
+start() {
+if [ -e /usr/lib/easyrsa/openvpn ]; then
+		mv -f /usr/lib/easyrsa/openvpn /etc/init.d/openvpn
+	fi
+	if [ -d /etc/luci-uploads ]; then
+		rm -rfv /etc/luci-uploads
+	fi
+	ln -s /etc/openvpn /etc/luci-uploads 
+}

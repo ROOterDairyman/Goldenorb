@@ -1,0 +1,8 @@
+
+config guestwifi 'guestwifi'
+	option ssid 'guest'
+	option ip '192.168.3.1'
+	option limit '0'
+	option dl '1024'
+	option ul '128'
+

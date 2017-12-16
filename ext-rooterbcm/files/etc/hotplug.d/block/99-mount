@@ -1,0 +1,30 @@
+#!/bin/sh  /etc/rc.common
+. /lib/functions.sh
+
+log() {
+	logger -t "99-mount" "$@"
+}
+
+if [ ! -f /tmp/bootend.file ]; then
+	sleep 10
+	while [ ! -f /tmp/bootend.file ]; do
+		sleep 1
+	done
+	log "Delay Block Mount for boot up"
+fi
+
+blkdev=`dirname $DEVPATH` 
+if [ `basename $blkdev` != "block" ]; then 
+	device=`basename $DEVPATH` 
+	if echo $device | grep -q "mtdblock"; then
+		exit 0
+	fi
+
+	case "$ACTION" in
+		remove) 
+			log "remove /mnt/$device"
+			umount -l /mnt/$device 
+			rm -rf /mnt/$device
+		;; 
+	esac 
+fi

@@ -1,0 +1,102 @@
+<%+header%>
+
+<script type="text/javascript" src="<%=resource%>/xhr.js"></script>
+<script type="text/javascript">//<![CDATA[
+
+	XHR.get('<%=luci.dispatcher.build_url("admin", "status", "get_ver")%>',
+			null,
+			function(x, rv)
+			{
+				document.getElementById('current').innerHTML=rv.current;
+				document.getElementById('last').innerHTML=rv.last;
+				document.getElementById('log').innerHTML=rv.log;
+				document.getElementById('status').innerHTML=" ";
+			}
+		);
+
+	function getlog(btn)
+	{
+		document.getElementById('status').innerHTML="Getting Change Log from Server";
+		XHR.get('<%=luci.dispatcher.build_url("admin", "status", "get_change")%>',
+			null,
+			function(x, rv)
+			{
+				document.getElementById('current').innerHTML=rv.current;
+				document.getElementById('last').innerHTML=rv.last;
+				document.getElementById('log').innerHTML=rv.log;
+				document.getElementById('status').innerHTML=rv.status;
+			}
+		);
+		return false;
+	}
+
+//]]></script>
+
+<form method="post" action="<%=REQUEST_URI%>">
+<div class="cbi-map" id="cbi-firm">
+<h2><a id="content" name="content">Firmware Updating</a></h2>
+<div class="cbi-map-descr">Check if your current firmware is the latest available</div>
+<fieldset class="cbi-section" id="cbi-ver">
+	<legend>Versions</legend>
+	<table width="550"  border="0">
+  	<tr>
+    		<td width="20%"><div align="right">Current Firmware :</div></td>
+    		<td width="59%"><ul id="current"></ul></td>
+    		<td width="21%">&nbsp;</td>
+  	</tr>
+	<tr>
+    		<td>&nbsp;</td>
+	</tr>
+  	<tr>
+    		<td><div align="right">Previous Checked Firmware : </div></td>
+    		<td><ul id="last"></ul></td>
+    		<td>&nbsp;</td>
+  	</tr>
+	</table>
+
+
+</fieldset>
+
+<fieldset class="cbi-section" id="cbi-upd">
+	<table width="550"  border="0">
+	<tr>
+    		<td width="13%">&nbsp;</td>
+    		<td width="17%">&nbsp;</td>
+    		<td width="69%">&nbsp;</td>
+    		<td width="1%">&nbsp;</td>
+  	</tr>
+	<tr>
+    		<td>&nbsp;</td>
+    		<td><input type="button" class="cbi-button cbi-button-apply" value="<%:Get Change Log%>" onclick="return getlog(this)" /></td>
+    		<td><ul class="warning" id="status"></ul></td>
+    		<td>&nbsp;</td>
+  	</tr>
+	<tr>
+    		<td>&nbsp;</td>
+	</tr>
+	</table>
+</fieldset>
+
+<fieldset class="cbi-section" id="cbi-txt">
+	<legend>Last Update Change Log</legend>
+	<table width="550"  border="0">
+  	<tr>
+    		<td width="10%"><div align="right"> </div></td>
+    		<td width="89%"><ul id="log"></ul></td>
+    		<td width="1%">&nbsp;</td>
+  	</tr>
+	</table>
+</fieldset>
+
+<fieldset class="cbi-section" id="cbi-link">
+	<table width="550"  border="0">
+  	<tr>
+    		<td width="10%"><div align="right"> </div></td>
+    		<td width="89%"><div>Firmware available at the <a href="http://www.ofmodemsandmen.com/index.html" target="_blank">Of Modems and Men</a> web site</div></td>
+    		<td width="1%">&nbsp;</td>
+  	</tr>
+	</table>
+</fieldset>
+</div>
+</form>
+<%+footer%>

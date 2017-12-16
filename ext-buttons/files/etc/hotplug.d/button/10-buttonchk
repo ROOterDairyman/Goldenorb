@@ -1,0 +1,7 @@
+#!/bin/sh
+
+log() {
+	logger -t "Button Checker " "$@"
+}
+
+log "Button Name : $BUTTON     Action : $ACTION"
